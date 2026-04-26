@@ -9,6 +9,7 @@ function App() {
   const [frequency, setFrequency] = useState(100500000); // 100.5 MHz
   const [gain, setGain] = useState(20);
   const [volume, setVolume] = useState(50);
+  const [mode, setMode] = useState('FM'); // FM or DMR
   
   const [currentIq, setCurrentIq] = useState<Float32Array>(new Float32Array());
 
@@ -101,10 +102,12 @@ function App() {
 
         workerRef.current?.postMessage({
           type: 'IQ_DATA',
+          mode: mode,
           buffer: data,
           sampleRate: 1024000
         }, [data]);
       }, 
+
       (err) => {
         alert(err.message);
         setDeviceConnected(false);
@@ -120,6 +123,16 @@ function App() {
       sdrRef.current?.setFrequency(f);
   };
 
+  const handleFreqInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const val = parseInt(e.target.value);
+      if (!isNaN(val)) {
+        handleFreqChange(val);
+      } else {
+        // Allow empty state during typing
+        setFrequency(e.target.value as any);
+      }
+  };
+
   return (
     <div className="app-container">
       <header className="header">
@@ -132,8 +145,13 @@ function App() {
       <div className="controls-panel">
         <div className="panel tuner-panel">
           <h2>Tuner</h2>
-          <div className="freq-display">
-            {(frequency / 1000000).toFixed(3)} MHz
+          <div className="control-group">
+            <input 
+              type="number"
+              className="freq-display-input"
+              value={frequency}
+              onChange={handleFreqInput}
+            />
           </div>
           <div className="control-group">
             <label>Center Frequency</label>
@@ -173,11 +191,18 @@ function App() {
               onChange={(e) => setVolume(Number(e.target.value))}
             />
           </div>
+          <div className="control-group">
+            <label>Demodulation Mode</label>
+            <select className="mode-select" value={mode} onChange={(e) => setMode(e.target.value)}>
+               <option value="FM">FM (Analog Voice)</option>
+               <option value="DMR">DMR (Digital Mobile Radio)</option>
+            </select>
+          </div>
         </div>
       </div>
 
       <div className="panel canvas-container">
-        <Waterfall iqData={currentIq} />
+        <Waterfall iqData={currentIq} centerFreq={frequency} sampleRate={1024000} />
       </div>
     </div>
   );
